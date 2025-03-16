@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universo Musical | Tu constelación sonora personalizada</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="background">
+        <div class="stars"></div>
+        <div class="nebula"></div>
+    </div>
+
+    <main>
+        <!-- Pantalla inicial de login -->
+        <div id="login-screen" class="screen active">
+            <h1 class="title">Descubre tu <span class="highlight">Universo Musical</span></h1>
+            <p class="subtitle">Visualiza tu música favorita como una constelación única y personal</p>
+            <button id="login-button" class="spotify-button">
+                <img src="https://cdnjs.cloudflare.com/ajax/libs/simple-icons/3.0.1/spotify.svg" alt="Spotify logo">
+                Iniciar sesión con Spotify
+            </button>
+        </div>
+
+        <!-- Pantalla de carga -->
+        <div id="loading-screen" class="screen">
+            <div class="loader"></div>
+            <p>Generando tu universo musical...</p>
+        </div>
+
+        <!-- Pantalla de constelación -->
+        <div id="constellation-screen" class="screen">
+            <div class="controls">
+                <button id="share-button" class="neon-button">Compartir mi universo</button>
+                <button id="logout-button" class="subtle-button">Cerrar sesión</button>
+            </div>
+            <div id="universe-container">
+                <canvas id="constellation-canvas"></canvas>
+            </div>
+            <div id="tooltip" class="tooltip"></div>
+            <div class="legend">
+                <h3>Tu Universo Musical</h3>
+                <div class="legend-item">
+                    <span class="legend-symbol bright"></span>
+                    <span>Artistas más escuchados</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-symbol medium"></span>
+                    <span>Artistas frecuentes</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-symbol dim"></span>
+                    <span>Artistas ocasionales</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-line"></span>
+                    <span>Conexiones entre géneros</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.4/pixi.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
