@@ -186,34 +186,51 @@ function randomInRange(min, max) {
 
 // Crear una cuadrícula para distribuir imágenes uniformemente
 function createGrid(containerWidth, containerHeight, numItems) {
-    // Calculamos un número apropiado de columnas basado en el aspecto del contenedor
+    // Crear un array con posiciones disponibles en una cuadrícula más densa
+    const margin = 20; // Margen mínimo entre elementos
+    const positions = [];
+    
+    // Determinar el número de filas y columnas para una mejor distribución
+    // Intentamos crear más posiciones de las necesarias para tener más opciones
+    const density = 2.5; // Factor de densidad para crear más posiciones de las necesarias
+    const totalPositions = Math.ceil(numItems * density);
     const aspectRatio = containerWidth / containerHeight;
-    const cols = Math.round(Math.sqrt(numItems * aspectRatio));
-    const rows = Math.ceil(numItems / cols);
+    const cols = Math.ceil(Math.sqrt(totalPositions * aspectRatio));
+    const rows = Math.ceil(totalPositions / cols);
     
     const cellWidth = containerWidth / cols;
     const cellHeight = containerHeight / rows;
     
-    const cells = [];
+    // Crear muchas posiciones posibles para luego seleccionar las mejores
     for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
-            if (cells.length < numItems) {
-                // Añadimos algo de aleatoriedad dentro de cada celda
-                const offsetX = cellWidth * 0.1;
-                const offsetY = cellHeight * 0.1;
-                
-                cells.push({
-                    x: col * cellWidth + offsetX/2,
-                    y: row * cellHeight + offsetY/2,
-                    width: cellWidth - offsetX,
-                    height: cellHeight - offsetY
-                });
-            }
+            // Añadir variación dentro de cada celda para evitar patrones regulares
+            const baseX = col * cellWidth;
+            const baseY = row * cellHeight;
+            
+            // Agregar variación pero manteniéndose dentro de los límites
+            const variationX = cellWidth * 0.3; // 30% de variación horizontal
+            const variationY = cellHeight * 0.3; // 30% de variación vertical
+            
+            const x = baseX + randomInRange(-variationX, variationX);
+            const y = baseY + randomInRange(-variationY, variationY);
+            
+            // Asegurar que la posición esté dentro de los límites del contenedor
+            const safeX = Math.max(margin, Math.min(containerWidth - margin, x));
+            const safeY = Math.max(margin, Math.min(containerHeight - margin, y));
+            
+            positions.push({
+                x: safeX,
+                y: safeY,
+                used: false
+            });
         }
     }
     
-    // Mezclar las celdas para una distribución más aleatoria pero uniforme
-    return cells.sort(() => Math.random() - 0.5);
+    // Mezclar todas las posiciones para aleatorizar
+    const shuffledPositions = [...positions].sort(() => Math.random() - 0.5);
+    
+    return shuffledPositions;
 }
 
 // Mostrar todos los elementos en el collage
@@ -222,17 +239,39 @@ function displayInCollage(items) {
     const containerWidth = musicCollageContainer.offsetWidth;
     const containerHeight = musicCollageContainer.offsetHeight;
     
-    // Mejoramos la variedad de tamaños para crear más interés visual
-    const minSize = Math.min(containerWidth, containerHeight) * 0.12; // 12% del lado más pequeño
-    const maxSize = Math.min(containerWidth, containerHeight) * 0.25; // 25% del lado más pequeño
+    // Tamaños variables para las imágenes con más variación
+    const sizes = [
+        { width: 90, height: 90 },
+        { width: 110, height: 110 },
+        { width: 130, height: 130 },
+        { width: 150, height: 150 },
+        { width: 170, height: 170 }
+    ];
     
     // Mezclar los elementos para distribuir los tipos
     const shuffledItems = [...items].sort(() => Math.random() - 0.5);
     
-    // Crear una cuadrícula para distribuir las imágenes uniformemente
-    const grid = createGrid(containerWidth, containerHeight, shuffledItems.length);
+    // Crear una cuadrícula con muchas posiciones potenciales
+    const availablePositions = createGrid(containerWidth, containerHeight, shuffledItems.length);
     
-    // Colocar cada elemento en una celda de la cuadrícula
+    // Función para verificar si una posición está demasiado cerca de otras ya usadas
+    function isTooClose(newX, newY, width, height, usedPositions, minDistance = 40) {
+        for (const pos of usedPositions) {
+            const dx = Math.abs(newX - pos.x);
+            const dy = Math.abs(newY - pos.y);
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < minDistance) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    // Posiciones que ya han sido utilizadas
+    const usedPositions = [];
+    
+    // Colocar cada elemento en una posición única
     shuffledItems.forEach((item, index) => {
         const el = document.createElement('div');
         el.className = 'artwork-item';
@@ -240,36 +279,59 @@ function displayInCollage(items) {
         el.title = `${item.name} (${item.type})`;
         el.setAttribute('data-type', item.type);
         
-        // Tamaños más variados entre un mínimo y máximo razonables
-        const size = minSize + Math.random() * (maxSize - minSize);
-        el.style.width = `${size}px`;
-        el.style.height = `${size}px`;
+        // Seleccionar un tamaño aleatorio
+        const size = sizes[Math.floor(Math.random() * sizes.length)];
+        el.style.width = `${size.width}px`;
+        el.style.height = `${size.height}px`;
         
-        const cell = grid[index];
+        // Encontrar una posición que no esté demasiado cerca de otras
+        let position;
+        let attempts = 0;
+        const maxAttempts = 30;
         
-        // Posicionar dentro de la celda con algo de variación aleatoria
-        // pero asegurando que permanezca mayormente dentro de la celda
-        const maxOffsetX = Math.max(0, cell.width - size);
-        const maxOffsetY = Math.max(0, cell.height - size);
+        do {
+            // Si agotamos los intentos, simplemente aceptamos cualquier posición disponible
+            if (attempts >= maxAttempts || index >= availablePositions.length) {
+                position = {
+                    x: randomInRange(size.width/2, containerWidth - size.width/2),
+                    y: randomInRange(size.height/2, containerHeight - size.height/2)
+                };
+                break;
+            }
+            
+            position = availablePositions[index + attempts];
+            attempts++;
+        } while (isTooClose(position.x, position.y, size.width, size.height, usedPositions));
         
-        const offsetX = randomInRange(0, maxOffsetX);
-        const offsetY = randomInRange(0, maxOffsetY);
+        // Ajustar la posición para que la imagen quede centrada en el punto
+        const adjustedX = position.x - (size.width / 2);
+        const adjustedY = position.y - (size.height / 2);
         
-        el.style.left = `${cell.x + offsetX}px`;
-        el.style.top = `${cell.y + offsetY}px`;
+        // Asegurar que la imagen no se salga del contenedor
+        const safeX = Math.max(0, Math.min(containerWidth - size.width, adjustedX));
+        const safeY = Math.max(0, Math.min(containerHeight - size.height, adjustedY));
         
-        // Rotación aleatoria más sutil
-        const rotate = randomInRange(-12, 12);
+        el.style.left = `${safeX}px`;
+        el.style.top = `${safeY}px`;
+        
+        // Registrar esta posición como usada
+        usedPositions.push({
+            x: safeX + (size.width / 2),
+            y: safeY + (size.height / 2)
+        });
+        
+        // Rotación aleatoria con más variación
+        const rotate = randomInRange(-20, 20);
         el.style.setProperty('--random-rotate', `${rotate}deg`);
         el.style.transform = `rotate(${rotate}deg)`;
         
-        // Animación escalonada
-        el.style.animation = `fadeIn 0.6s ease forwards`;
-        el.style.animationDelay = `${index * 0.08}s`;
+        // Animación con retraso basado en el índice
+        el.style.animation = `fadeIn 0.5s ease forwards`;
+        el.style.animationDelay = `${index * 0.08}s`; // Ligeramente más rápido
         el.style.opacity = '0';
         
-        // Z-index más inteligente - los elementos más grandes van más arriba
-        el.style.zIndex = Math.floor(size / minSize * 5);
+        // Agregar z-index aleatorio para efecto de profundidad
+        el.style.zIndex = Math.floor(randomInRange(1, 30)); // Mayor rango para más variación
         
         musicCollageContainer.appendChild(el);
     });
