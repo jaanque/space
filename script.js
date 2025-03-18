@@ -97,8 +97,18 @@ async function showMuseum(token) {
             }))
         ];
 
-        // Limitamos la cantidad de portadas para que no sobrecargue la visualización
-        const limitedCovers = allCovers.slice(0, 25);
+        // Usar más portadas para crear un efecto más cargado
+        // Duplicar algunas portadas si es necesario para tener más densidad
+        let extraCovers = [];
+        if (allCovers.length < 50) {
+            extraCovers = [...allCovers].sort(() => Math.random() - 0.5).slice(0, 50 - allCovers.length);
+        }
+        
+        // Combinamos todas las portadas
+        const combinedCovers = [...allCovers, ...extraCovers];
+        
+        // Limitamos la cantidad de portadas a 50 para un efecto más cargado
+        const limitedCovers = combinedCovers.slice(0, 50);
         
         // Mostrar las portadas en el cuadro
         displayCovers(limitedCovers);
@@ -114,7 +124,7 @@ async function showMuseum(token) {
 
 // Obtener canciones reproducidas recientemente
 async function getRecentlyPlayed(token) {
-    const response = await fetch('https://api.spotify.com/v1/me/player/recently-played?limit=10', {
+    const response = await fetch('https://api.spotify.com/v1/me/player/recently-played?limit=20', {
         headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -128,7 +138,7 @@ async function getRecentlyPlayed(token) {
 
 // Obtener elementos top (canciones o artistas)
 async function getTopItems(token, type) {
-    const response = await fetch(`https://api.spotify.com/v1/me/top/${type}?time_range=medium_term&limit=10`, {
+    const response = await fetch(`https://api.spotify.com/v1/me/top/${type}?time_range=medium_term&limit=20`, {
         headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -160,159 +170,54 @@ async function getTopAlbums(token) {
 
 // Mostrar las portadas en el cuadro con distribución corregida por todo el marco
 function displayCovers(covers) {
-    // Primero aseguramos que el contenedor tenga una posición relativa
-    paintingContent.style.position = 'relative';
+    // Obtener dimensiones del contenedor
+    const paintingElement = document.querySelector('.painting');
+    const containerWidth = paintingElement.offsetWidth;
+    const containerHeight = paintingElement.offsetHeight;
     
-    // Esperar a que el contenedor tenga dimensiones reales
-    setTimeout(() => {
-        // Obtener dimensiones reales del contenedor
-        const containerWidth = paintingContent.offsetWidth;
-        const containerHeight = paintingContent.offsetHeight;
-        
-        console.log(`Dimensiones del contenedor: ${containerWidth}x${containerHeight}`);
-        
-        if (containerWidth === 0 || containerHeight === 0) {
-            console.error("El contenedor no tiene dimensiones definidas");
-            // Usar dimensiones fijas si no podemos obtener las reales
-            displayCoversWithFixedSize(covers, 800, 600);
-            return;
-        }
-        
-        // Limpiar el contenido existente
-        paintingContent.innerHTML = '';
-        
-        // Tamaños variables para las portadas
-        const sizes = [80, 100, 120, 150];
-        
-        // Crear una cuadrícula uniforme para distribuir las portadas
-        const gridRows = 5;
-        const gridCols = 5;
-        
-        // Calcular coordenadas específicas para cada posición de la cuadrícula
-        const positions = [];
-        
-        for (let row = 0; row < gridRows; row++) {
-            for (let col = 0; col < gridCols; col++) {
-                // Calcular posición con margen para no pegar completamente a los bordes
-                const margin = 20;
-                const cellWidth = (containerWidth - (2 * margin)) / gridCols;
-                const cellHeight = (containerHeight - (2 * margin)) / gridRows;
-                
-                // La posición base es el centro de cada celda de la cuadrícula
-                const baseX = margin + (col * cellWidth) + (cellWidth / 2);
-                const baseY = margin + (row * cellHeight) + (cellHeight / 2);
-                
-                // Añadir algo de aleatoriedad, pero limitada para mantener la estructura
-                const randomOffsetX = (Math.random() - 0.5) * (cellWidth * 0.5);
-                const randomOffsetY = (Math.random() - 0.5) * (cellHeight * 0.5);
-                
-                positions.push({
-                    x: baseX + randomOffsetX,
-                    y: baseY + randomOffsetY
-                });
-            }
-        }
-        
-        // Mezclar las posiciones para que no haya un patrón evidente
-        shuffleArray(positions);
-        
-        // Limitar el número de portadas si es necesario
-        const numCovers = Math.min(covers.length, positions.length);
-        
-        // Colocar cada portada en su posición correspondiente
-        for (let i = 0; i < numCovers; i++) {
-            const cover = covers[i];
-            const position = positions[i];
-            const size = sizes[Math.floor(Math.random() * sizes.length)];
-            
-            // Crear el elemento para la portada
-            const coverElement = document.createElement('div');
-            coverElement.className = 'album-cover';
-            coverElement.style.width = `${size}px`;
-            coverElement.style.height = `${size}px`;
-            
-            // Centrar la portada en la posición calculada
-            coverElement.style.left = `${position.x - (size / 2)}px`;
-            coverElement.style.top = `${position.y - (size / 2)}px`;
-            
-            // Rotación aleatoria para dar efecto de collage
-            const rotation = Math.floor(Math.random() * 30) - 15; // Entre -15 y 15 grados
-            coverElement.style.transform = `rotate(${rotation}deg)`;
-            
-            // Imagen de la portada
-            const img = document.createElement('img');
-            img.src = cover.image;
-            img.alt = `Portada ${cover.type}`;
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.objectFit = 'cover';
-            
-            coverElement.appendChild(img);
-            paintingContent.appendChild(coverElement);
-        }
-        
-    }, 100); // Pequeño retraso para asegurar que el DOM esté listo
-}
-
-// Función alternativa con dimensiones fijas si no podemos obtener las dimensiones reales
-function displayCoversWithFixedSize(covers, width, height) {
+    // Asegurarse de que el contenedor tenga una altura mínima
+    if (containerHeight < 400) {
+        paintingElement.style.height = '600px';
+    }
+    
+    // Obtener dimensiones actualizadas
+    const width = containerWidth || 800;
+    const height = containerHeight || 600;
+    
     // Limpiar el contenido existente
     paintingContent.innerHTML = '';
     
-    // Establecer dimensiones fijas al contenedor
-    paintingContent.style.width = `${width}px`;
-    paintingContent.style.height = `${height}px`;
+    // Tamaños variables para las portadas (en general más pequeñas para que quepan más)
+    const sizes = [60, 80, 100, 120];
     
-    // Tamaños variables para las portadas
-    const sizes = [80, 100, 120, 150];
+    // Crear una cuadrícula más densa para distribuir las portadas
+    const gridRows = 8;
+    const gridCols = 8;
     
-    // Distribuir las portadas en posiciones específicas para cubrir todo el marco
-    const positions = [
-        // Esquinas
-        { x: 50, y: 50 },                    // Superior izquierda
-        { x: width - 50, y: 50 },            // Superior derecha
-        { x: 50, y: height - 50 },           // Inferior izquierda
-        { x: width - 50, y: height - 50 },   // Inferior derecha
-        
-        // Bordes
-        { x: width / 2, y: 50 },             // Superior centro
-        { x: width / 2, y: height - 50 },    // Inferior centro
-        { x: 50, y: height / 2 },            // Izquierda centro
-        { x: width - 50, y: height / 2 },    // Derecha centro
-        
-        // Centros de cuadrantes
-        { x: width / 4, y: height / 4 },     // Cuadrante superior izquierdo
-        { x: width * 3/4, y: height / 4 },   // Cuadrante superior derecho
-        { x: width / 4, y: height * 3/4 },   // Cuadrante inferior izquierdo
-        { x: width * 3/4, y: height * 3/4 }, // Cuadrante inferior derecho
-        
-        // Centro
-        { x: width / 2, y: height / 2 },
-        
-        // Posiciones adicionales distribuidas
-        { x: width / 3, y: height / 3 },
-        { x: width * 2/3, y: height / 3 },
-        { x: width / 3, y: height * 2/3 },
-        { x: width * 2/3, y: height * 2/3 },
-        
-        // Más posiciones para cubrir el espacio
-        { x: width / 6, y: height / 2 },
-        { x: width * 5/6, y: height / 2 },
-        { x: width / 2, y: height / 6 },
-        { x: width / 2, y: height * 5/6 },
-        
-        // Posiciones adicionales
-        { x: width / 4, y: height / 2 },
-        { x: width * 3/4, y: height / 2 },
-        { x: width / 2, y: height / 4 },
-        { x: width / 2, y: height * 3/4 }
-    ];
+    // Calcular coordenadas específicas para cada posición de la cuadrícula
+    const positions = [];
     
-    // Añadir variación aleatoria a las posiciones
-    positions.forEach(pos => {
-        pos.x += (Math.random() - 0.5) * 40;
-        pos.y += (Math.random() - 0.5) * 40;
-    });
+    for (let row = 0; row < gridRows; row++) {
+        for (let col = 0; col < gridCols; col++) {
+            // Calcular posición con margen para no pegar completamente a los bordes
+            const margin = 10;
+            const cellWidth = (width - (2 * margin)) / gridCols;
+            const cellHeight = (height - (2 * margin)) / gridRows;
+            
+            // La posición base es el centro de cada celda de la cuadrícula
+            const baseX = margin + (col * cellWidth) + (cellWidth / 2);
+            const baseY = margin + (row * cellHeight) + (cellHeight / 2);
+            
+            // Añadir algo de aleatoriedad, pero limitada para mantener la estructura
+            const randomOffsetX = (Math.random() - 0.5) * (cellWidth * 0.7);
+            const randomOffsetY = (Math.random() - 0.5) * (cellHeight * 0.7);
+            
+            positions.push({
+                x: baseX + randomOffsetX,
+                y: baseY + randomOffsetY
+            });
+        }
+    }
     
     // Mezclar las posiciones para que no haya un patrón evidente
     shuffleArray(positions);
@@ -337,7 +242,7 @@ function displayCoversWithFixedSize(covers, width, height) {
         coverElement.style.top = `${position.y - (size / 2)}px`;
         
         // Rotación aleatoria para dar efecto de collage
-        const rotation = Math.floor(Math.random() * 30) - 15; // Entre -15 y 15 grados
+        const rotation = Math.floor(Math.random() * 40) - 20; // Entre -20 y 20 grados
         coverElement.style.transform = `rotate(${rotation}deg)`;
         
         // Imagen de la portada
@@ -365,14 +270,35 @@ function shuffleArray(array) {
 // Función para compartir el cuadro
 shareButton.addEventListener('click', async () => {
     try {
+        // Esperar a que todo esté cargado antes de generar la imagen
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const paintingElement = document.querySelector('.frame');
+        
+        // Asegurarse de que el contenedor tenga dimensiones definidas
+        const paintingContent = document.querySelector('.painting-content');
+        const computedStyle = window.getComputedStyle(paintingContent);
+        
+        // Establecer dimensiones explícitas si es necesario
+        if (computedStyle.height === 'auto' || parseInt(computedStyle.height) < 400) {
+            paintingContent.style.height = '600px';
+        }
         
         // Configurar opciones para html2canvas
         const options = {
-            backgroundColor: '#121212',
-            width: 1080,
-            height: 1920,
+            backgroundColor: '#F5F5F5',
+            useCORS: true, // Permitir el uso de imágenes de otros dominios
+            allowTaint: true, // Permitir imágenes que pueden "contaminar" el canvas
             scale: 2, // Mejorar la calidad
+            logging: true, // Activar logging para depuración
+            onclone: (clonedDoc) => {
+                // Manipular el DOM clonado antes de renderizar
+                const clonedPainting = clonedDoc.querySelector('.painting');
+                // Asegurarse de que el clon tenga altura suficiente
+                if (clonedPainting) {
+                    clonedPainting.style.height = '600px';
+                }
+            }
         };
         
         // Crear el canvas con html2canvas

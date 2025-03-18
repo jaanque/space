@@ -93,6 +93,7 @@ body {
     min-height: 65vh;
     width: 90vw;
     max-width: 800px;
+    height: 600px; /* Altura fija para mejor consistencia */
     position: relative;
     overflow: hidden;
 }
@@ -101,17 +102,16 @@ body {
     position: relative;
     width: 100%;
     height: 100%;
-    min-height: 65vh;
+    min-height: 600px; /* Altura mínima para asegurar que haya espacio suficiente */
     background-color: #F5F5F5;
-    display: block; /* Cambiado de flex a block para posicionamiento absoluto */
-    padding: 20px;
+    display: block;
     box-sizing: border-box;
 }
 
 .album-cover {
     position: absolute;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    border: 4px solid white;
+    border: 3px solid white; /* Borde un poco más delgado para que se vea más limpio */
     transition: transform 0.3s ease;
     overflow: hidden;
     z-index: 5;
@@ -191,6 +191,7 @@ body {
     max-height: 80vh;
     object-fit: contain;
     margin-bottom: 20px;
+    border: 2px solid #333; /* Añadir borde para mejorar la visibilidad */
 }
 
 .overlay-controls {
@@ -225,9 +226,24 @@ body {
     
     .painting {
         min-height: 50vh;
+        height: 500px;
     }
     
     .painting-content {
-        min-height: 50vh;
+        min-height: 500px;
     }
+    
+    .album-cover {
+        border-width: 2px;
+    }
+}
+
+/* Animación suave para cargar las portadas */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.album-cover {
+    animation: fadeIn 0.5s ease forwards;
 }
