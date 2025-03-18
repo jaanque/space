@@ -74,7 +74,10 @@ async function fetchUserProfile(token) {
 }
 
 async function fetchTopItems(token, type, limit = 50) {
-    const response = await fetch(`https://api.spotify.com/v1/me/top/${type}?limit=${limit}&time_range=medium_term`, {
+    // Reducir el límite para móviles para mejorar el rendimiento
+    const deviceLimit = window.innerWidth < 480 ? 20 : limit;
+    
+    const response = await fetch(`https://api.spotify.com/v1/me/top/${type}?limit=${deviceLimit}&time_range=medium_term`, {
         headers: { 'Authorization': 'Bearer ' + token }
     });
     return await response.json();
@@ -124,16 +127,24 @@ function createCollage() {
     // Mezclar aleatoriamente
     allItems.sort(() => Math.random() - 0.5);
     
+    // Limitar el número de elementos para móviles
+    const maxItems = window.innerWidth < 480 ? 24 : allItems.length;
+    const displayItems = allItems.slice(0, maxItems);
+    
     // Crear elementos en el DOM
-    allItems.forEach((item, index) => {
+    displayItems.forEach((item, index) => {
         const img = document.createElement('img');
         img.src = item.imageUrl;
         img.alt = item.name;
         img.title = item.name;
         img.className = 'album-cover';
         
-        // Asignar tamaños diferentes para algunas imágenes
-        if (index % 5 === 0) {
+        // Asignar tamaños diferentes para algunas imágenes (menos en móviles)
+        if (window.innerWidth > 480 && index % 5 === 0) {
+            img.style.gridColumn = 'span 2';
+            img.style.gridRow = 'span 2';
+        } else if (window.innerWidth <= 480 && index % 8 === 0) {
+            // En móviles, menos imágenes grandes
             img.style.gridColumn = 'span 2';
             img.style.gridRow = 'span 2';
         }
@@ -142,54 +153,61 @@ function createCollage() {
     });
 }
 
-// Función modificada para generar una imagen compartible idéntica a la vista del museo
+// Función modificada para generar una imagen compartible y permitir su descarga
 function generateShareImage() {
     // Mostrar mensaje de carga
-    shareImageContainer.innerHTML = '<p>Preparando vista para compartir...</p>';
+    shareImageContainer.innerHTML = '<p>Preparando imagen...</p>';
     
     try {
-        // Vamos a crear una réplica exacta del collage que el usuario está viendo
+        // Vamos a crear una versión compacta del collage para móviles
         shareImageContainer.innerHTML = '';
         
-        // Contenedor principal
+        // Contenedor principal - con ID para html2canvas
         const shareView = document.createElement('div');
+        shareView.id = 'capture-this';
         shareView.style.width = '100%';
-        shareView.style.maxWidth = '900px';
         shareView.style.margin = '0 auto';
+        shareView.style.backgroundColor = '#282828';
+        shareView.style.padding = '10px';
+        shareView.style.borderRadius = '8px';
         
         // Título
         const title = document.createElement('h2');
         title.textContent = 'Mi Museo Musical';
-        title.style.fontSize = '2rem';
+        title.style.fontSize = '1.3rem';
         title.style.color = '#1DB954';
-        title.style.margin = '10px 0 20px';
+        title.style.margin = '5px 0';
         title.style.textAlign = 'center';
         shareView.appendChild(title);
         
-        // Crear el marco del museo (idéntico al original)
+        // Crear el marco del museo (optimizado para móviles)
         const museumFrame = document.createElement('div');
         museumFrame.style.width = '100%';
         museumFrame.style.backgroundColor = '#333';
-        museumFrame.style.border = '20px solid #8B4513';
+        museumFrame.style.border = '8px solid #8B4513';
         museumFrame.style.borderRadius = '2px';
-        museumFrame.style.boxShadow = '0 0 20px rgba(0, 0, 0, 0.5)';
-        museumFrame.style.padding = '10px';
+        museumFrame.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
+        museumFrame.style.padding = '3px';
         museumFrame.style.position = 'relative';
         
-        // Grid para las imágenes (replicando exactamente collage-container)
+        // Grid para las imágenes (tamaño reducido para móviles)
         const grid = document.createElement('div');
         grid.style.display = 'grid';
-        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(100px, 1fr))';
-        grid.style.gridAutoRows = '100px';
+        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(45px, 1fr))';
+        grid.style.gridAutoRows = '45px';
         grid.style.gridAutoFlow = 'dense';
-        grid.style.gap = '4px';
+        grid.style.gap = '2px';
         grid.style.width = '100%';
-        grid.style.height = '600px';
+        grid.style.height = '250px'; // Altura reducida para móviles
         grid.style.overflow = 'hidden';
         
-        // Clonar exactamente cada elemento del collage original
+        // Seleccionar imágenes para el collage (menos para móviles)
         const originalImages = collageContainer.querySelectorAll('img');
-        originalImages.forEach(originalImg => {
+        const imageLimit = Math.min(originalImages.length, 16); // Reducir para móviles
+        
+        // Solo usar las primeras imageLimit imágenes
+        for (let i = 0; i < imageLimit; i++) {
+            const originalImg = originalImages[i];
             const img = document.createElement('img');
             img.src = originalImg.src;
             img.alt = originalImg.alt;
@@ -198,19 +216,17 @@ function generateShareImage() {
             img.style.height = '100%';
             img.style.objectFit = 'cover';
             
-            // Copiar los estilos especiales (como el tamaño span)
-            if (originalImg.style.gridColumn) {
-                img.style.gridColumn = originalImg.style.gridColumn;
-            }
-            if (originalImg.style.gridRow) {
-                img.style.gridRow = originalImg.style.gridRow;
+            // Copiar estilo span pero solo para algunas imágenes
+            if (i % 5 === 0) {
+                img.style.gridColumn = 'span 2';
+                img.style.gridRow = 'span 2';
             }
             
             const imgContainer = document.createElement('div');
             imgContainer.style.position = 'relative';
             imgContainer.appendChild(img);
             grid.appendChild(imgContainer);
-        });
+        }
         
         museumFrame.appendChild(grid);
         shareView.appendChild(museumFrame);
@@ -218,44 +234,57 @@ function generateShareImage() {
         // Pie de página
         const footer = document.createElement('p');
         footer.textContent = 'nam3.es';
-        footer.style.fontSize = '1.2rem';
-        footer.style.margin = '15px 0 0';
+        footer.style.fontSize = '0.9rem';
+        footer.style.margin = '5px 0 0';
         footer.style.textAlign = 'center';
         shareView.appendChild(footer);
         
         // Añadir la vista completa al contenedor
         shareImageContainer.appendChild(shareView);
         
-        // Instrucciones para captura de pantalla
-        const screenshotInstructions = document.createElement('div');
-        screenshotInstructions.style.margin = '20px auto';
-        screenshotInstructions.style.padding = '15px';
-        screenshotInstructions.style.backgroundColor = '#333';
-        screenshotInstructions.style.borderRadius = '8px';
-        screenshotInstructions.style.textAlign = 'center';
-        
-        screenshotInstructions.innerHTML = `
-            <p>Para compartir tu museo musical, toma una captura de pantalla:</p>
-            <ul style="text-align: left; list-style-position: inside;">
-                <li>En Windows: Pulsa <strong>Windows + Shift + S</strong></li>
-                <li>En Mac: Pulsa <strong>Command + Shift + 4</strong></li>
-                <li>En smartphones: Pulsa los botones de encendido + volumen</li>
-            </ul>
-        `;
-        
-        shareImageContainer.appendChild(screenshotInstructions);
-        
         // Configurar el botón de descarga
-        downloadButton.textContent = 'Preparar para captura';
+        downloadButton.textContent = 'Descargar imagen';
         downloadButton.onclick = () => {
-            // Hacer scroll a la vista para que sea más fácil capturarla
-            shareView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Cambiar el botón mientras se procesa
+            downloadButton.textContent = 'Procesando...';
+            downloadButton.disabled = true;
             
-            // Opcional: resaltar brevemente para indicar que está listo para capturar
-            museumFrame.style.boxShadow = '0 0 20px rgba(29, 185, 84, 0.8)';
-            setTimeout(() => {
-                museumFrame.style.boxShadow = '0 0 20px rgba(0, 0, 0, 0.5)';
-            }, 1000);
+            // Intentar generar imagen para descargar
+            html2canvas(document.getElementById('capture-this'), {
+                backgroundColor: '#282828',
+                scale: 2, // Mayor calidad
+                logging: false,
+                useCORS: true, // Permitir cargar imágenes de otros dominios
+                allowTaint: true // Permitir imágenes de otros dominios
+            }).then(canvas => {
+                // Convertir canvas a URL de datos
+                const imageData = canvas.toDataURL('image/png');
+                
+                // Crear un enlace para descargar
+                const link = document.createElement('a');
+                link.href = imageData;
+                link.download = 'mi-museo-musical.png';
+                
+                // Simular clic para descargar automáticamente
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Restaurar el botón
+                downloadButton.textContent = 'Descargar imagen';
+                downloadButton.disabled = false;
+            }).catch(error => {
+                console.error('Error generando la imagen:', error);
+                downloadButton.textContent = 'Error - Intenta de nuevo';
+                downloadButton.disabled = false;
+                
+                // Mostrar mensaje de error
+                const errorMsg = document.createElement('p');
+                errorMsg.textContent = 'No se pudo generar la imagen. Intenta de nuevo.';
+                errorMsg.style.color = '#ff6b6b';
+                errorMsg.style.margin = '10px 0';
+                shareImageContainer.appendChild(errorMsg);
+            });
         };
         
     } catch (error) {
@@ -264,38 +293,24 @@ function generateShareImage() {
     }
 }
 
-// Función para generar un color aleatorio pero consistente basado en un texto
-function getRandomColor(text) {
-    // Crear un hash simple del texto
-    let hash = 0;
-    for (let i = 0; i < text.length; i++) {
-        hash = text.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    
-    // Convertir a color hexadecimal
-    const hue = Math.abs(hash % 360);
-    const saturation = 60 + Math.abs((hash >> 8) % 20); // 60-80%
-    const lightness = 45 + Math.abs((hash >> 16) % 10); // 45-55%
-    
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-}
-
-// Event listeners - Mejorar manejo de eventos para el modal
+// Event listeners optimizados para dispositivos móviles
 loginButton.addEventListener('click', login);
 logoutButton.addEventListener('click', logout);
 
-// Evento para mostrar el modal
+// Evento para mostrar el modal (con detección de tap)
 shareButton.addEventListener('click', () => {
     shareModal.classList.remove('hidden');
     generateShareImage();
 });
 
-// Múltiples formas de cerrar el modal
-closeModal.addEventListener('click', () => {
+// Cerrar el modal (con mejor detección para móviles)
+closeModal.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     shareModal.classList.add('hidden');
 });
 
-// Cerrar el modal haciendo clic fuera de su contenido
+// Cerrar el modal haciendo clic fuera (mejor para táctiles)
 shareModal.addEventListener('click', (event) => {
     if (event.target === shareModal) {
         shareModal.classList.add('hidden');
@@ -306,6 +321,14 @@ shareModal.addEventListener('click', (event) => {
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !shareModal.classList.contains('hidden')) {
         shareModal.classList.add('hidden');
+    }
+});
+
+// Evento para ajustar la interfaz si el dispositivo cambia de orientación
+window.addEventListener('resize', () => {
+    // Si estamos en la pantalla del museo, actualizar el collage
+    if (!museumScreen.classList.contains('hidden')) {
+        createCollage();
     }
 });
 
@@ -325,6 +348,9 @@ window.addEventListener('load', async () => {
         window.location.hash = '';
         
         try {
+            // Mostrar pantalla de carga
+            loginScreen.innerHTML = '<h2>Cargando...</h2><p>Obteniendo tu música...</p>';
+            
             // Obtener datos del usuario y elementos top
             userProfileData = await fetchUserProfile(token);
             
@@ -333,6 +359,10 @@ window.addEventListener('load', async () => {
             
             const tracksData = await fetchTopItems(token, 'tracks', 30);
             topTracks = tracksData.items || [];
+            
+            // Restaurar pantalla de login (por si falla)
+            loginScreen.innerHTML = '<h1>Museo Musical</h1><p>Visualiza tu gusto musical como una obra de arte</p><button id="login-button" class="button">Iniciar sesión con Spotify</button>';
+            document.getElementById('login-button').addEventListener('click', login);
             
             // Crear collage y mostrar pantalla del museo
             createCollage();
@@ -347,6 +377,9 @@ window.addEventListener('load', async () => {
         const savedToken = localStorage.getItem('spotify_access_token');
         if (savedToken) {
             try {
+                // Mostrar pantalla de carga
+                loginScreen.innerHTML = '<h2>Cargando...</h2><p>Recuperando tu música...</p>';
+                
                 // Verificar que el token sigue siendo válido
                 userProfileData = await fetchUserProfile(savedToken);
                 
@@ -356,10 +389,18 @@ window.addEventListener('load', async () => {
                 const tracksData = await fetchTopItems(savedToken, 'tracks', 30);
                 topTracks = tracksData.items || [];
                 
+                // Restaurar pantalla de login (por si falla)
+                loginScreen.innerHTML = '<h1>Museo Musical</h1><p>Visualiza tu gusto musical como una obra de arte</p><button id="login-button" class="button">Iniciar sesión con Spotify</button>';
+                document.getElementById('login-button').addEventListener('click', login);
+                
                 createCollage();
                 showMuseumScreen();
             } catch (error) {
                 console.error('Error con el token guardado:', error);
+                // Restaurar pantalla de login
+                loginScreen.innerHTML = '<h1>Museo Musical</h1><p>Visualiza tu gusto musical como una obra de arte</p><button id="login-button" class="button">Iniciar sesión con Spotify</button>';
+                document.getElementById('login-button').addEventListener('click', login);
+                
                 logout();
             }
         } else {
