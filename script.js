@@ -142,26 +142,20 @@ function createCollage() {
     });
 }
 
-// Método alternativo para generar una imagen compartible
+// Función modificada para generar una imagen compartible idéntica a la vista del museo
 function generateShareImage() {
     // Mostrar mensaje de carga
     shareImageContainer.innerHTML = '<p>Preparando vista para compartir...</p>';
     
     try {
-        // En lugar de intentar generar una imagen con html2canvas, creamos una vista
-        // que se pueda compartir tal como está
+        // Vamos a crear una réplica exacta del collage que el usuario está viendo
         shareImageContainer.innerHTML = '';
         
         // Contenedor principal
         const shareView = document.createElement('div');
         shareView.style.width = '100%';
-        shareView.style.maxWidth = '800px';
+        shareView.style.maxWidth = '900px';
         shareView.style.margin = '0 auto';
-        shareView.style.padding = '20px';
-        shareView.style.backgroundColor = '#121212';
-        shareView.style.color = '#ffffff';
-        shareView.style.borderRadius = '10px';
-        shareView.style.boxSizing = 'border-box';
         
         // Título
         const title = document.createElement('h2');
@@ -172,102 +166,67 @@ function generateShareImage() {
         title.style.textAlign = 'center';
         shareView.appendChild(title);
         
-        // Container para la galería
-        const galleryContainer = document.createElement('div');
-        galleryContainer.style.padding = '15px';
-        galleryContainer.style.backgroundColor = '#282828';
-        galleryContainer.style.borderRadius = '8px';
-        galleryContainer.style.boxShadow = '0 4px 30px rgba(0, 0, 0, 0.3)';
+        // Crear el marco del museo (idéntico al original)
+        const museumFrame = document.createElement('div');
+        museumFrame.style.width = '100%';
+        museumFrame.style.backgroundColor = '#333';
+        museumFrame.style.border = '20px solid #8B4513';
+        museumFrame.style.borderRadius = '2px';
+        museumFrame.style.boxShadow = '0 0 20px rgba(0, 0, 0, 0.5)';
+        museumFrame.style.padding = '10px';
+        museumFrame.style.position = 'relative';
         
-        // Grid para las imágenes
+        // Grid para las imágenes (replicando exactamente collage-container)
         const grid = document.createElement('div');
         grid.style.display = 'grid';
         grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(100px, 1fr))';
-        grid.style.gap = '10px';
+        grid.style.gridAutoRows = '100px';
+        grid.style.gridAutoFlow = 'dense';
+        grid.style.gap = '4px';
+        grid.style.width = '100%';
+        grid.style.height = '600px';
+        grid.style.overflow = 'hidden';
         
-        // Seleccionar hasta 16 elementos para mostrar (combina artistas y tracks)
-        const itemsToShow = [];
-        
-        // Primero, obtener algunos artistas principales
-        const topArtistsToShow = topArtists
-            .filter(artist => artist.images && artist.images.length)
-            .slice(0, 8);
+        // Clonar exactamente cada elemento del collage original
+        const originalImages = collageContainer.querySelectorAll('img');
+        originalImages.forEach(originalImg => {
+            const img = document.createElement('img');
+            img.src = originalImg.src;
+            img.alt = originalImg.alt;
+            img.title = originalImg.title;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
             
-        // Luego, algunas canciones principales
-        const topTracksToShow = topTracks
-            .filter(track => track.album && track.album.images && track.album.images.length)
-            .slice(0, 8);
-        
-        // Combinar y mezclar
-        itemsToShow.push(...topArtistsToShow, ...topTracksToShow);
-        itemsToShow.sort(() => Math.random() - 0.5);
-        
-        // Añadir elementos al grid
-        itemsToShow.forEach((item, index) => {
-            const imageUrl = item.images ? item.images[0].url : item.album.images[0].url;
-            const name = item.name;
-            
-            const gridItem = document.createElement('div');
-            gridItem.style.position = 'relative';
-            gridItem.style.overflow = 'hidden';
-            gridItem.style.borderRadius = '4px';
-            gridItem.style.aspectRatio = '1';
-            
-            // Algunos elementos son más grandes
-            if (index % 5 === 0) {
-                gridItem.style.gridColumn = 'span 2';
-                gridItem.style.gridRow = 'span 2';
+            // Copiar los estilos especiales (como el tamaño span)
+            if (originalImg.style.gridColumn) {
+                img.style.gridColumn = originalImg.style.gridColumn;
+            }
+            if (originalImg.style.gridRow) {
+                img.style.gridRow = originalImg.style.gridRow;
             }
             
-            // Fondo de color en lugar de imagen
-            gridItem.style.backgroundColor = getRandomColor(name);
-            
-            // Texto con el nombre
-            const nameLabel = document.createElement('div');
-            nameLabel.textContent = name;
-            nameLabel.style.position = 'absolute';
-            nameLabel.style.bottom = '0';
-            nameLabel.style.left = '0';
-            nameLabel.style.right = '0';
-            nameLabel.style.padding = '8px';
-            nameLabel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-            nameLabel.style.color = '#fff';
-            nameLabel.style.fontSize = '12px';
-            nameLabel.style.whiteSpace = 'nowrap';
-            nameLabel.style.overflow = 'hidden';
-            nameLabel.style.textOverflow = 'ellipsis';
-            
-            gridItem.appendChild(nameLabel);
-            grid.appendChild(gridItem);
+            const imgContainer = document.createElement('div');
+            imgContainer.style.position = 'relative';
+            imgContainer.appendChild(img);
+            grid.appendChild(imgContainer);
         });
         
-        galleryContainer.appendChild(grid);
-        shareView.appendChild(galleryContainer);
+        museumFrame.appendChild(grid);
+        shareView.appendChild(museumFrame);
         
         // Pie de página
         const footer = document.createElement('p');
-        footer.textContent = 'Creado en nam3.es con mis favoritos de Spotify';
-        footer.style.fontSize = '0.9rem';
+        footer.textContent = 'nam3.es';
+        footer.style.fontSize = '1.2rem';
         footer.style.margin = '15px 0 0';
         footer.style.textAlign = 'center';
-        footer.style.color = '#aaa';
         shareView.appendChild(footer);
-        
-        // Usuario
-        if (userProfileData && userProfileData.display_name) {
-            const userInfo = document.createElement('p');
-            userInfo.textContent = `Por ${userProfileData.display_name}`;
-            userInfo.style.fontSize = '1rem';
-            userInfo.style.margin = '5px 0';
-            userInfo.style.textAlign = 'center';
-            userInfo.style.color = '#1DB954';
-            shareView.appendChild(userInfo);
-        }
         
         // Añadir la vista completa al contenedor
         shareImageContainer.appendChild(shareView);
         
-        // En lugar de html2canvas, usamos captura de pantalla nativa
+        // Instrucciones para captura de pantalla
         const screenshotInstructions = document.createElement('div');
         screenshotInstructions.style.margin = '20px auto';
         screenshotInstructions.style.padding = '15px';
@@ -286,16 +245,16 @@ function generateShareImage() {
         
         shareImageContainer.appendChild(screenshotInstructions);
         
-        // Configurar el botón de descarga para hacer scroll a la vista
+        // Configurar el botón de descarga
         downloadButton.textContent = 'Preparar para captura';
         downloadButton.onclick = () => {
             // Hacer scroll a la vista para que sea más fácil capturarla
             shareView.scrollIntoView({ behavior: 'smooth', block: 'start' });
             
             // Opcional: resaltar brevemente para indicar que está listo para capturar
-            shareView.style.boxShadow = '0 0 0 3px #1DB954';
+            museumFrame.style.boxShadow = '0 0 20px rgba(29, 185, 84, 0.8)';
             setTimeout(() => {
-                shareView.style.boxShadow = 'none';
+                museumFrame.style.boxShadow = '0 0 20px rgba(0, 0, 0, 0.5)';
             }, 1000);
         };
         
