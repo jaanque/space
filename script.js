@@ -186,10 +186,9 @@ function randomInRange(min, max) {
 
 // Crear una cuadrícula para distribuir imágenes uniformemente
 function createGrid(containerWidth, containerHeight, numItems) {
-    // Determinamos cuántas celdas necesitamos en cada dirección
-    // para una distribución aproximadamente cuadrada
-    const sqrtItems = Math.ceil(Math.sqrt(numItems));
-    const cols = sqrtItems;
+    // Calculamos un número apropiado de columnas basado en el aspecto del contenedor
+    const aspectRatio = containerWidth / containerHeight;
+    const cols = Math.round(Math.sqrt(numItems * aspectRatio));
     const rows = Math.ceil(numItems / cols);
     
     const cellWidth = containerWidth / cols;
@@ -199,17 +198,21 @@ function createGrid(containerWidth, containerHeight, numItems) {
     for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
             if (cells.length < numItems) {
+                // Añadimos algo de aleatoriedad dentro de cada celda
+                const offsetX = cellWidth * 0.1;
+                const offsetY = cellHeight * 0.1;
+                
                 cells.push({
-                    x: col * cellWidth,
-                    y: row * cellHeight,
-                    width: cellWidth,
-                    height: cellHeight
+                    x: col * cellWidth + offsetX/2,
+                    y: row * cellHeight + offsetY/2,
+                    width: cellWidth - offsetX,
+                    height: cellHeight - offsetY
                 });
             }
         }
     }
     
-    // Mezclar las celdas para una distribución más aleatoria
+    // Mezclar las celdas para una distribución más aleatoria pero uniforme
     return cells.sort(() => Math.random() - 0.5);
 }
 
@@ -219,13 +222,9 @@ function displayInCollage(items) {
     const containerWidth = musicCollageContainer.offsetWidth;
     const containerHeight = musicCollageContainer.offsetHeight;
     
-    // Tamaños variables para las imágenes
-    const sizes = [
-        { width: 100, height: 100 },
-        { width: 120, height: 120 },
-        { width: 140, height: 140 },
-        { width: 160, height: 160 }
-    ];
+    // Mejoramos la variedad de tamaños para crear más interés visual
+    const minSize = Math.min(containerWidth, containerHeight) * 0.12; // 12% del lado más pequeño
+    const maxSize = Math.min(containerWidth, containerHeight) * 0.25; // 25% del lado más pequeño
     
     // Mezclar los elementos para distribuir los tipos
     const shuffledItems = [...items].sort(() => Math.random() - 0.5);
@@ -241,17 +240,17 @@ function displayInCollage(items) {
         el.title = `${item.name} (${item.type})`;
         el.setAttribute('data-type', item.type);
         
-        // Seleccionar un tamaño aleatorio
-        const size = sizes[Math.floor(Math.random() * sizes.length)];
-        el.style.width = `${size.width}px`;
-        el.style.height = `${size.height}px`;
+        // Tamaños más variados entre un mínimo y máximo razonables
+        const size = minSize + Math.random() * (maxSize - minSize);
+        el.style.width = `${size}px`;
+        el.style.height = `${size}px`;
         
         const cell = grid[index];
         
         // Posicionar dentro de la celda con algo de variación aleatoria
-        // pero asegurando que permanezca dentro de la celda
-        const maxOffsetX = Math.max(0, cell.width - size.width - 10);
-        const maxOffsetY = Math.max(0, cell.height - size.height - 10);
+        // pero asegurando que permanezca mayormente dentro de la celda
+        const maxOffsetX = Math.max(0, cell.width - size);
+        const maxOffsetY = Math.max(0, cell.height - size);
         
         const offsetX = randomInRange(0, maxOffsetX);
         const offsetY = randomInRange(0, maxOffsetY);
@@ -259,18 +258,18 @@ function displayInCollage(items) {
         el.style.left = `${cell.x + offsetX}px`;
         el.style.top = `${cell.y + offsetY}px`;
         
-        // Rotación aleatoria
-        const rotate = randomInRange(-15, 15);
+        // Rotación aleatoria más sutil
+        const rotate = randomInRange(-12, 12);
         el.style.setProperty('--random-rotate', `${rotate}deg`);
         el.style.transform = `rotate(${rotate}deg)`;
         
-        // Animación con retraso basado en el índice
-        el.style.animation = `fadeIn 0.5s ease forwards`;
-        el.style.animationDelay = `${index * 0.1}s`;
+        // Animación escalonada
+        el.style.animation = `fadeIn 0.6s ease forwards`;
+        el.style.animationDelay = `${index * 0.08}s`;
         el.style.opacity = '0';
         
-        // Agregar z-index aleatorio para efecto de profundidad
-        el.style.zIndex = Math.floor(randomInRange(1, 10));
+        // Z-index más inteligente - los elementos más grandes van más arriba
+        el.style.zIndex = Math.floor(size / minSize * 5);
         
         musicCollageContainer.appendChild(el);
     });

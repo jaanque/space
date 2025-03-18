@@ -95,43 +95,44 @@ header {
     height: 600px;
     background-color: #8B4513;
     padding: 15px;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
     border-radius: 5px;
+    /* Añade textura de madera */
+    background-image: linear-gradient(45deg, rgba(139, 69, 19, 0.8) 25%, transparent 25%, transparent 75%, rgba(139, 69, 19, 0.8) 75%, rgba(139, 69, 19, 0.8)), 
+                      linear-gradient(45deg, rgba(139, 69, 19, 0.8) 25%, transparent 25%, transparent 75%, rgba(139, 69, 19, 0.8) 75%, rgba(139, 69, 19, 0.8));
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
 }
 
 .artwork-collage {
     width: 100%;
     height: 100%;
-    background-color: #fff;
+    background-color: #f9f9f2; /* Color de lienzo */
     position: relative;
     overflow: hidden;
-    background-color: #f8f8f8; /* Un fondo más claro para el collage */
+    /* Añade una textura sutil de lienzo */
+    background-image: linear-gradient(to right, rgba(0,0,0,0.02) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(0,0,0,0.02) 1px, transparent 1px);
+    background-size: 15px 15px;
 }
 
 .artwork-item {
     position: absolute;
     background-size: cover;
     background-position: center;
-    box-shadow: 3px 3px 10px rgba(0,0,0,0.3);
+    box-shadow: 3px 3px 10px rgba(0,0,0,0.25);
     transition: all 0.3s ease;
     border-radius: 4px;
     cursor: pointer;
+    /* Añade un borde blanco como en fotografías físicas */
+    border: 2px solid white;
 }
 
+/* Mejora el efecto hover */
 .artwork-item:hover {
-    transform: scale(1.1) rotate(0deg) !important; /* Anular cualquier rotación al pasar el mouse */
-    z-index: 100 !important; /* Asegurar que esté por encima de todas */
-    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-}
-
-.frame-label {
-    position: absolute;
-    bottom: -25px;
-    left: 0;
-    right: 0;
-    text-align: center;
-    font-style: italic;
-    color: #666;
+    transform: scale(1.15) rotate(0deg) !important;
+    z-index: 100 !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
 }
 
 /* Etiquetas para los tipos de contenido */
