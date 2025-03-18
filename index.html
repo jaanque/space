@@ -11,45 +11,40 @@
         <!-- Pantalla de login -->
         <div id="login-screen" class="screen">
             <h1>Museo Musical</h1>
-            <p>Visualiza tu gusto musical como una obra de arte</p>
-            <button id="login-button" class="button">Iniciar sesión con Spotify</button>
+            <p>Descubre tu gusto musical en forma de arte</p>
+            <button id="login-button" class="spotify-btn">
+                <img src="https://cdnjs.cloudflare.com/ajax/libs/simple-icons/3.0.1/spotify.svg" alt="Spotify logo" width="24" height="24">
+                Conectar con Spotify
+            </button>
         </div>
 
         <!-- Pantalla del museo -->
         <div id="museum-screen" class="screen hidden">
-            <div class="header">
-                <h1>Museo Musical</h1>
-                <div class="buttons">
-                    <button id="share-button" class="button">Compartir</button>
-                    <button id="logout-button" class="button">Cerrar sesión</button>
+            <div class="frame">
+                <div class="painting" id="painting-canvas">
+                    <div class="painting-content">
+                        <!-- Las imágenes de portadas se insertarán aquí mediante JavaScript -->
+                    </div>
                 </div>
+                <div class="frame-label">Museo Musical</div>
             </div>
-            
-            <div class="frame-container">
-                <div class="museum-frame">
-                    <div id="collage-container"></div>
-                </div>
-            </div>
-
-            <div class="footer">
-                <p>nam3.es</p>
-            </div>
+            <button id="share-button" class="share-btn">Compartir mi museo</button>
+            <div class="attribution">nam3.es</div>
         </div>
 
-        <!-- Modal para compartir - Asegurarse de que esté oculto inicialmente -->
-        <div id="share-modal" class="modal hidden">
-            <div class="modal-content">
-                <span class="close-modal">&times;</span>
-                <h2>Comparte tu Museo Musical</h2>
-                <div id="share-image-container">
-                    <!-- Aquí se mostrará la imagen generada para compartir -->
+        <!-- Overlay para mostrar el proceso de compartir -->
+        <div id="share-overlay" class="overlay hidden">
+            <div class="share-preview">
+                <img id="share-image" alt="Museo Musical Preview">
+                <div class="overlay-controls">
+                    <button id="cancel-share">Cancelar</button>
+                    <button id="confirm-share">Compartir</button>
                 </div>
-                <button id="download-button" class="button">Descargar imagen</button>
             </div>
         </div>
     </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.5.0-beta4/html2canvas.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
