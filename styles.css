@@ -90,7 +90,7 @@ body {
 
 .painting {
     background-color: #F5F5F5;
-    min-height: 65vh;
+    min-height: 70vh;
     width: 90vw;
     max-width: 800px;
     height: 600px; /* Altura fija para mejor consistencia */
@@ -111,15 +111,22 @@ body {
 .album-cover {
     position: absolute;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    border: 3px solid white; /* Borde un poco más delgado para que se vea más limpio */
-    transition: transform 0.3s ease;
+    border: 2px solid white; /* Borde más delgado para que se vean más limpias */
+    transition: transform 0.2s ease;
     overflow: hidden;
     z-index: 5;
 }
 
 .album-cover:hover {
-    transform: scale(1.1);
-    z-index: 10;
+    transform: scale(1.15) rotate(0deg) !important; /* Anular rotación al hacer hover */
+    z-index: 20 !important; /* Asegurar que la portada en hover esté al frente */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4); /* Sombra más pronunciada en hover */
+    border-color: #FFD700; /* Borde dorado en hover */
+}
+
+.album-cover.filler {
+    border-width: 1px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .album-cover img {
@@ -215,6 +222,27 @@ body {
 #confirm-share {
     background-color: #1DB954;
     color: white;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.album-cover {
+    animation: fadeIn 0.5s ease forwards;
+    animation-delay: calc(var(--animation-order, 0) * 0.05s); /* Animación escalonada */
+}
+
+/* Animación para las portadas de relleno */
+@keyframes slowFadeIn {
+    from { opacity: 0; }
+    to { opacity: 0.8; }
+}
+
+.album-cover.filler {
+    animation: slowFadeIn 1s ease forwards;
+    animation-delay: 0.5s; /* Las portadas de relleno aparecen después */
 }
 
 /* Estilos responsivos */

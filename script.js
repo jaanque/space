@@ -69,6 +69,9 @@ window.addEventListener('load', () => {
 // Mostrar la pantalla del museo y cargar los datos
 async function showMuseum(token) {
     try {
+        // Mostrar indicador de carga
+        document.getElementById('loading-indicator').classList.remove('hidden');
+        
         // Obtener datos de Spotify
         const [recentTracks, topTracks, topArtists, topAlbums] = await Promise.all([
             getRecentlyPlayed(token),
@@ -97,27 +100,34 @@ async function showMuseum(token) {
             }))
         ];
 
-        // Usar más portadas para crear un efecto más cargado
-        // Duplicar algunas portadas si es necesario para tener más densidad
-        let extraCovers = [];
-        if (allCovers.length < 50) {
-            extraCovers = [...allCovers].sort(() => Math.random() - 0.5).slice(0, 50 - allCovers.length);
-        }
+        // Duplicar portadas para tener suficientes para llenar el marco
+        let duplicatedCovers = [];
+        // Duplicar cada portada 2-3 veces para asegurar densidad
+        allCovers.forEach(cover => {
+            const duplicates = Math.floor(Math.random() * 2) + 2; // 2-3 duplicados
+            for (let i = 0; i < duplicates; i++) {
+                duplicatedCovers.push(cover);
+            }
+        });
         
-        // Combinamos todas las portadas
-        const combinedCovers = [...allCovers, ...extraCovers];
+        // Mezclar todas las portadas para distribución aleatoria
+        const mixedCovers = shuffleArray([...allCovers, ...duplicatedCovers]);
         
-        // Limitamos la cantidad de portadas a 50 para un efecto más cargado
-        const limitedCovers = combinedCovers.slice(0, 50);
+        // Aseguramos tener al menos 100 elementos para un efecto muy saturado
+        const finalCovers = mixedCovers.slice(0, Math.max(100, mixedCovers.length));
         
         // Mostrar las portadas en el cuadro
-        displayCovers(limitedCovers);
+        displayCovers(finalCovers);
+        
+        // Ocultar indicador de carga
+        document.getElementById('loading-indicator').classList.add('hidden');
         
         // Cambiar a la pantalla del museo
         loginScreen.classList.add('hidden');
         museumScreen.classList.remove('hidden');
     } catch (error) {
         console.error('Error al cargar datos de Spotify:', error);
+        document.getElementById('loading-indicator').classList.add('hidden');
         alert('Ha ocurrido un error al cargar tus datos de Spotify. Por favor, intenta de nuevo.');
     }
 }
@@ -168,7 +178,7 @@ async function getTopAlbums(token) {
     return uniqueAlbums;
 }
 
-// Mostrar las portadas en el cuadro con distribución corregida por todo el marco
+// Mostrar las portadas en el cuadro con distribución para llenar completamente el espacio
 function displayCovers(covers) {
     // Obtener dimensiones del contenedor
     const paintingElement = document.querySelector('.painting');
@@ -188,11 +198,11 @@ function displayCovers(covers) {
     paintingContent.innerHTML = '';
     
     // Tamaños variables para las portadas (en general más pequeñas para que quepan más)
-    const sizes = [60, 80, 100, 120];
+    const sizes = [50, 60, 70, 80, 90, 100]; // Añadir tamaños más pequeños
     
     // Crear una cuadrícula más densa para distribuir las portadas
-    const gridRows = 8;
-    const gridCols = 8;
+    const gridRows = 12; // Aumentar número de filas
+    const gridCols = 12; // Aumentar número de columnas
     
     // Calcular coordenadas específicas para cada posición de la cuadrícula
     const positions = [];
@@ -200,7 +210,7 @@ function displayCovers(covers) {
     for (let row = 0; row < gridRows; row++) {
         for (let col = 0; col < gridCols; col++) {
             // Calcular posición con margen para no pegar completamente a los bordes
-            const margin = 10;
+            const margin = 5; // Reducir el margen
             const cellWidth = (width - (2 * margin)) / gridCols;
             const cellHeight = (height - (2 * margin)) / gridRows;
             
@@ -209,8 +219,8 @@ function displayCovers(covers) {
             const baseY = margin + (row * cellHeight) + (cellHeight / 2);
             
             // Añadir algo de aleatoriedad, pero limitada para mantener la estructura
-            const randomOffsetX = (Math.random() - 0.5) * (cellWidth * 0.7);
-            const randomOffsetY = (Math.random() - 0.5) * (cellHeight * 0.7);
+            const randomOffsetX = (Math.random() - 0.5) * (cellWidth * 0.6);
+            const randomOffsetY = (Math.random() - 0.5) * (cellHeight * 0.6);
             
             positions.push({
                 x: baseX + randomOffsetX,
@@ -222,12 +232,21 @@ function displayCovers(covers) {
     // Mezclar las posiciones para que no haya un patrón evidente
     shuffleArray(positions);
     
-    // Limitar el número de portadas si es necesario
-    const numCovers = Math.min(covers.length, positions.length);
+    // Duplicar covers si son insuficientes para llenar todas las posiciones
+    let extendedCovers = [...covers];
+    while (extendedCovers.length < positions.length) {
+        extendedCovers = [...extendedCovers, ...covers];
+    }
+    
+    // Mezclar las portadas duplicadas para evitar patrones obvios
+    shuffleArray(extendedCovers);
+    
+    // Limitar el número de portadas al número de posiciones disponibles
+    const numCovers = Math.min(extendedCovers.length, positions.length);
     
     // Colocar cada portada en su posición correspondiente
     for (let i = 0; i < numCovers; i++) {
-        const cover = covers[i];
+        const cover = extendedCovers[i];
         const position = positions[i];
         const size = sizes[Math.floor(Math.random() * sizes.length)];
         
@@ -252,6 +271,65 @@ function displayCovers(covers) {
         img.style.width = '100%';
         img.style.height = '100%';
         img.style.objectFit = 'cover';
+        
+        // Añadir efecto de sombra para dar profundidad
+        coverElement.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3)';
+        
+        // Añadir un zIndex aleatorio para crear sensación de profundidad
+        coverElement.style.zIndex = Math.floor(Math.random() * 10) + 1;
+        
+        // Añadir retardo de animación escalonado
+        coverElement.style.setProperty('--animation-order', i % 20);
+        
+        coverElement.appendChild(img);
+        paintingContent.appendChild(coverElement);
+    }
+    
+    // Añadir una capa adicional de pequeñas portadas para llenar espacios en blanco
+    addFillerCovers(extendedCovers, width, height);
+}
+
+// Función para añadir portadas adicionales más pequeñas para llenar espacios en blanco
+function addFillerCovers(covers, width, height) {
+    // Calcular cuántas portadas adicionales añadir (20% más)
+    const numAdditional = Math.floor(covers.length * 0.2);
+    
+    // Tamaños más pequeños para las portadas de relleno
+    const smallSizes = [30, 40, 45];
+    
+    for (let i = 0; i < numAdditional; i++) {
+        const cover = covers[Math.floor(Math.random() * covers.length)];
+        const size = smallSizes[Math.floor(Math.random() * smallSizes.length)];
+        
+        // Posición aleatoria dentro del contenedor
+        const x = Math.random() * (width - size);
+        const y = Math.random() * (height - size);
+        
+        // Crear el elemento para la portada de relleno
+        const coverElement = document.createElement('div');
+        coverElement.className = 'album-cover filler';
+        coverElement.style.width = `${size}px`;
+        coverElement.style.height = `${size}px`;
+        coverElement.style.left = `${x}px`;
+        coverElement.style.top = `${y}px`;
+        
+        // Rotación aleatoria
+        const rotation = Math.floor(Math.random() * 60) - 30; // Entre -30 y 30 grados
+        coverElement.style.transform = `rotate(${rotation}deg)`;
+        
+        // Imagen de la portada
+        const img = document.createElement('img');
+        img.src = cover.image;
+        img.alt = `Portada de relleno`;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        
+        // Reducir la opacidad para que parezcan estar en un segundo plano
+        coverElement.style.opacity = '0.8';
+        
+        // Zindex bajo para que estén detrás de las portadas principales
+        coverElement.style.zIndex = '1';
         
         coverElement.appendChild(img);
         paintingContent.appendChild(coverElement);
