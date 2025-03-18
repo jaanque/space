@@ -9,9 +9,7 @@ const logoutButton = document.getElementById('logout-button');
 const loginSection = document.getElementById('login-section');
 const museumSection = document.getElementById('museum-section');
 const loadingScreen = document.getElementById('loading');
-const topTracksContainer = document.getElementById('top-tracks');
-const topAlbumsContainer = document.getElementById('top-albums');
-const topArtistsContainer = document.getElementById('top-artists');
+const musicCollageContainer = document.getElementById('music-collage');
 
 // Función para generar una cadena aleatoria para el state
 function generateRandomString(length) {
@@ -127,10 +125,11 @@ async function fetchFromSpotify(endpoint, token) {
 // Obtener tus top tracks
 async function getTopTracks(token) {
     try {
-        const data = await fetchFromSpotify('/me/top/tracks?limit=4&time_range=medium_term', token);
+        const data = await fetchFromSpotify('/me/top/tracks?limit=12&time_range=medium_term', token);
         return data.items.map(track => ({
             name: track.name,
-            image: track.album.images[0].url
+            image: track.album.images[0].url,
+            type: 'track'
         }));
     } catch (error) {
         console.error('Error al obtener top tracks:', error);
@@ -141,10 +140,11 @@ async function getTopTracks(token) {
 // Obtener tus top artistas
 async function getTopArtists(token) {
     try {
-        const data = await fetchFromSpotify('/me/top/artists?limit=4&time_range=medium_term', token);
+        const data = await fetchFromSpotify('/me/top/artists?limit=12&time_range=medium_term', token);
         return data.items.map(artist => ({
             name: artist.name,
-            image: artist.images[0].url
+            image: artist.images[0].url,
+            type: 'artist'
         }));
     } catch (error) {
         console.error('Error al obtener top artistas:', error);
@@ -155,18 +155,19 @@ async function getTopArtists(token) {
 // Obtener tus top álbumes (derivados de tus top tracks)
 async function getTopAlbums(token) {
     try {
-        const data = await fetchFromSpotify('/me/top/tracks?limit=20&time_range=medium_term', token);
+        const data = await fetchFromSpotify('/me/top/tracks?limit=30&time_range=medium_term', token);
         
         // Filtrar álbumes únicos
         const uniqueAlbums = [];
         const albumIds = new Set();
         
         data.items.forEach(track => {
-            if (!albumIds.has(track.album.id) && uniqueAlbums.length < 4) {
+            if (!albumIds.has(track.album.id) && uniqueAlbums.length < 12) {
                 albumIds.add(track.album.id);
                 uniqueAlbums.push({
                     name: track.album.name,
-                    image: track.album.images[0].url
+                    image: track.album.images[0].url,
+                    type: 'album'
                 });
             }
         });
@@ -178,16 +179,100 @@ async function getTopAlbums(token) {
     }
 }
 
-// Mostrar los elementos en el marco de museo
-function displayInFrame(items, container) {
-    container.innerHTML = '';
+// Función para obtener un número aleatorio en un rango
+function randomInRange(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+// Crear una cuadrícula para distribuir imágenes uniformemente
+function createGrid(containerWidth, containerHeight, numItems) {
+    // Determinamos cuántas celdas necesitamos en cada dirección
+    // para una distribución aproximadamente cuadrada
+    const sqrtItems = Math.ceil(Math.sqrt(numItems));
+    const cols = sqrtItems;
+    const rows = Math.ceil(numItems / cols);
     
-    items.forEach(item => {
+    const cellWidth = containerWidth / cols;
+    const cellHeight = containerHeight / rows;
+    
+    const cells = [];
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+            if (cells.length < numItems) {
+                cells.push({
+                    x: col * cellWidth,
+                    y: row * cellHeight,
+                    width: cellWidth,
+                    height: cellHeight
+                });
+            }
+        }
+    }
+    
+    // Mezclar las celdas para una distribución más aleatoria
+    return cells.sort(() => Math.random() - 0.5);
+}
+
+// Mostrar todos los elementos en el collage
+function displayInCollage(items) {
+    musicCollageContainer.innerHTML = '';
+    const containerWidth = musicCollageContainer.offsetWidth;
+    const containerHeight = musicCollageContainer.offsetHeight;
+    
+    // Tamaños variables para las imágenes
+    const sizes = [
+        { width: 100, height: 100 },
+        { width: 120, height: 120 },
+        { width: 140, height: 140 },
+        { width: 160, height: 160 }
+    ];
+    
+    // Mezclar los elementos para distribuir los tipos
+    const shuffledItems = [...items].sort(() => Math.random() - 0.5);
+    
+    // Crear una cuadrícula para distribuir las imágenes uniformemente
+    const grid = createGrid(containerWidth, containerHeight, shuffledItems.length);
+    
+    // Colocar cada elemento en una celda de la cuadrícula
+    shuffledItems.forEach((item, index) => {
         const el = document.createElement('div');
         el.className = 'artwork-item';
         el.style.backgroundImage = `url(${item.image})`;
-        el.title = item.name;
-        container.appendChild(el);
+        el.title = `${item.name} (${item.type})`;
+        el.setAttribute('data-type', item.type);
+        
+        // Seleccionar un tamaño aleatorio
+        const size = sizes[Math.floor(Math.random() * sizes.length)];
+        el.style.width = `${size.width}px`;
+        el.style.height = `${size.height}px`;
+        
+        const cell = grid[index];
+        
+        // Posicionar dentro de la celda con algo de variación aleatoria
+        // pero asegurando que permanezca dentro de la celda
+        const maxOffsetX = Math.max(0, cell.width - size.width - 10);
+        const maxOffsetY = Math.max(0, cell.height - size.height - 10);
+        
+        const offsetX = randomInRange(0, maxOffsetX);
+        const offsetY = randomInRange(0, maxOffsetY);
+        
+        el.style.left = `${cell.x + offsetX}px`;
+        el.style.top = `${cell.y + offsetY}px`;
+        
+        // Rotación aleatoria
+        const rotate = randomInRange(-15, 15);
+        el.style.setProperty('--random-rotate', `${rotate}deg`);
+        el.style.transform = `rotate(${rotate}deg)`;
+        
+        // Animación con retraso basado en el índice
+        el.style.animation = `fadeIn 0.5s ease forwards`;
+        el.style.animationDelay = `${index * 0.1}s`;
+        el.style.opacity = '0';
+        
+        // Agregar z-index aleatorio para efecto de profundidad
+        el.style.zIndex = Math.floor(randomInRange(1, 10));
+        
+        musicCollageContainer.appendChild(el);
     });
 }
 
@@ -210,10 +295,11 @@ async function loadSpotifyData() {
             getTopAlbums(token)
         ]);
         
-        // Mostrar datos
-        displayInFrame(tracks, topTracksContainer);
-        displayInFrame(artists, topArtistsContainer);
-        displayInFrame(albums, topAlbumsContainer);
+        // Combinar todos los elementos en una sola colección
+        const allItems = [...tracks, ...artists, ...albums];
+        
+        // Mostrar todos en el collage
+        displayInCollage(allItems);
         
         showMuseumSection();
     } catch (error) {
