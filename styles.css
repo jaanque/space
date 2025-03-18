@@ -2,262 +2,162 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
 }
 
 body {
-    font-family: 'Montserrat', sans-serif;
-    background-color: #000;
-    color: #fff;
-    height: 100vh;
-    overflow: hidden;
-    position: relative;
+    background-color: #f0f0f0;
+    color: #333;
 }
 
-/* Fondo y efectos */
-.background {
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Sección de Login */
+#login-section {
+    text-align: center;
+    padding: 100px 20px;
+}
+
+#login-section h1 {
+    font-size: 2.5em;
+    margin-bottom: 20px;
+}
+
+#login-section p {
+    margin-bottom: 30px;
+    font-size: 1.2em;
+    color: #666;
+}
+
+#login-button {
+    background-color: #1DB954;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    font-size: 1.1em;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#login-button:hover {
+    background-color: #168f3e;
+}
+
+/* Sección del Museo */
+#museum-section {
+    padding: 20px 0;
+    display: none; /* Por defecto oculto */
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+#logout-button {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.museum-content h2 {
+    text-align: center;
+    margin-bottom: 40px;
+    font-size: 1.8em;
+}
+
+.gallery {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 40px;
+}
+
+.exhibit {
+    text-align: center;
+}
+
+.exhibit h3 {
+    margin-bottom: 15px;
+    font-size: 1.4em;
+}
+
+.frame {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    background-color: #8B4513;
+    padding: 15px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+}
+
+.artwork {
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 5px;
+    overflow: hidden;
+}
+
+.artwork-item {
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    transition: transform 0.3s;
+}
+
+.artwork-item:hover {
+    transform: scale(1.05);
+}
+
+.frame-label {
+    position: absolute;
+    bottom: -25px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-style: italic;
+    color: #666;
+}
+
+/* Spinner de carga */
+#loading {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: -1;
-}
-
-.stars {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background-image: radial-gradient(2px 2px at 20px 30px, #eee, rgba(0, 0, 0, 0)),
-                      radial-gradient(2px 2px at 40px 70px, #fff, rgba(0, 0, 0, 0)),
-                      radial-gradient(1px 1px at 90px 40px, #ddd, rgba(0, 0, 0, 0));
-    background-repeat: repeat;
-    background-size: 200px 200px;
-    animation: twinkling 10s infinite linear;
-    opacity: 0.3;
-}
-
-.nebula {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(ellipse at center, rgba(39, 0, 82, 0.2) 0%, rgba(14, 0, 32, 0.1) 40%, rgba(0, 0, 0, 0) 70%),
-                radial-gradient(ellipse at 70% 60%, rgba(69, 0, 153, 0.2) 0%, rgba(33, 5, 77, 0.1) 30%, rgba(0, 0, 0, 0) 70%),
-                radial-gradient(ellipse at 30% 30%, rgba(35, 13, 102, 0.2) 0%, rgba(19, 7, 51, 0.1) 40%, rgba(0, 0, 0, 0) 70%);
-    filter: blur(40px);
-}
-
-/* Pantallas */
-.screen {
-    display: none;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: none; /* Por defecto oculto */
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    width: 100%;
-    padding: 20px;
+    z-index: 1000;
 }
 
-.screen.active {
-    display: flex;
-}
-
-/* Pantalla de inicio */
-.title {
-    font-size: 3.5rem;
-    text-align: center;
-    margin-bottom: 1rem;
-    letter-spacing: 2px;
-}
-
-.subtitle {
-    font-size: 1.2rem;
-    text-align: center;
-    max-width: 600px;
-    margin-bottom: 3rem;
-    opacity: 0.8;
-}
-
-.highlight {
-    color: #8862fc;
-    font-weight: 700;
-}
-
-.spotify-button {
-    display: flex;
-    align-items: center;
-    background-color: #1DB954;
-    color: white;
-    border: none;
-    border-radius: 50px;
-    padding: 15px 30px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.spotify-button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(29, 185, 84, 0.3);
-}
-
-.spotify-button img {
-    width: 24px;
-    height: 24px;
-    margin-right: 10px;
-}
-
-/* Pantalla de carga */
-.loader {
-    width: 60px;
-    height: 60px;
-    border: 5px solid rgba(255, 255, 255, 0.1);
-    border-top: 5px solid #8862fc;
+.spinner {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #1DB954;
     border-radius: 50%;
+    width: 50px;
+    height: 50px;
     animation: spin 1s linear infinite;
     margin-bottom: 20px;
-}
-
-/* Pantalla de constelación */
-.controls {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    display: flex;
-    gap: 15px;
-    z-index: 10;
-}
-
-#universe-container {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-}
-
-#constellation-canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
-}
-
-.tooltip {
-    position: absolute;
-    background-color: rgba(0, 0, 0, 0.85);
-    border: 1px solid #8862fc;
-    border-radius: 8px;
-    padding: 10px 15px;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-    font-size: 0.9rem;
-    max-width: 250px;
-    box-shadow: 0 0 10px rgba(136, 98, 252, 0.3);
-}
-
-.tooltip h4 {
-    color: #fff;
-    margin-bottom: 5px;
-}
-
-.tooltip p {
-    margin: 3px 0;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 0.85rem;
-}
-
-.neon-button {
-    background-color: transparent;
-    color: #8862fc;
-    border: 2px solid #8862fc;
-    border-radius: 50px;
-    padding: 8px 20px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 0 10px rgba(136, 98, 252, 0.3);
-}
-
-.neon-button:hover {
-    background-color: rgba(136, 98, 252, 0.2);
-    box-shadow: 0 0 20px rgba(136, 98, 252, 0.5);
-}
-
-.subtle-button {
-    background-color: transparent;
-    color: rgba(255, 255, 255, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50px;
-    padding: 8px 20px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.subtle-button:hover {
-    color: white;
-    border-color: white;
-}
-
-.legend {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    background-color: rgba(0, 0, 0, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
-    padding: 15px;
-    width: auto;
-    z-index: 10;
-}
-
-.legend h3 {
-    margin-bottom: 10px;
-    font-size: 1rem;
-    color: #8862fc;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-    font-size: 0.85rem;
-}
-
-.legend-symbol {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 10px;
-}
-
-.legend-symbol.bright {
-    background-color: #fff;
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
-}
-
-.legend-symbol.medium {
-    background-color: rgba(255, 255, 255, 0.7);
-    box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
-}
-
-.legend-symbol.dim {
-    background-color: rgba(255, 255, 255, 0.4);
-}
-
-.legend-line {
-    width: 20px;
-    height: 2px;
-    background: linear-gradient(90deg, #7e5bef, #a181ff);
-    margin-right: 10px;
-}
-
-/* Animaciones */
-@keyframes twinkling {
-    from { background-position: 0 0; }
-    to { background-position: 200px 200px; }
 }
 
 @keyframes spin {
@@ -265,21 +165,25 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .title {
-        font-size: 2.5rem;
-    }
-    .subtitle {
-        font-size: 1rem;
-    }
-    .controls {
-        top: 10px;
-        right: 10px;
-    }
-    .legend {
-        bottom: 10px;
-        left: 10px;
-        padding: 10px;
-    }
+/* Definir la clase hidden para controlar visibilidad */
+.hidden {
+    display: none !important; /* Usar !important para asegurar que tiene prioridad */
+}
+
+/* Definir la clase visible para mostrar elementos explícitamente */
+.visible {
+    display: flex !important; /* Para #loading */
+}
+
+/* Asegurarse que cuando un elemento no está oculto se muestra correctamente */
+#login-section:not(.hidden) {
+    display: block;
+}
+
+#museum-section:not(.hidden) {
+    display: block;
+}
+
+#loading:not(.hidden) {
+    display: flex;
 }
