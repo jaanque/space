@@ -1,391 +1,301 @@
-// Configuración de Spotify API
-const clientId = '97d973ea484b40d592cbf2e18ca5fd5c'; // Reemplaza con tu Client ID de Spotify Developer
+// Configuración de Spotify
+const clientId = '97d973ea484b40d592cbf2e18ca5fd5c'; // Reemplaza con tu Client ID de Spotify
 const redirectUri = window.location.origin + window.location.pathname;
 const scope = 'user-top-read user-read-private user-read-email';
 
-// Elementos del DOM
+// Almacenamiento de datos
+let userProfileData = null;
+let topArtists = [];
+let topTracks = [];
+
+// Elementos DOM
+const loginScreen = document.getElementById('login-screen');
+const museumScreen = document.getElementById('museum-screen');
 const loginButton = document.getElementById('login-button');
 const logoutButton = document.getElementById('logout-button');
-const loginSection = document.getElementById('login-section');
-const museumSection = document.getElementById('museum-section');
-const loadingScreen = document.getElementById('loading');
-const musicCollageContainer = document.getElementById('music-collage');
+const shareButton = document.getElementById('share-button');
+const shareModal = document.getElementById('share-modal');
+const closeModal = document.querySelector('.close-modal');
+const downloadButton = document.getElementById('download-button');
+const collageContainer = document.getElementById('collage-container');
+const shareImageContainer = document.getElementById('share-image-container');
 
-// Función para generar una cadena aleatoria para el state
+// Asegurarse de que el modal esté oculto inicialmente
+shareModal.classList.add('hidden');
+
+// Funciones de autenticación
 function generateRandomString(length) {
-    let text = '';
     const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    
+    let text = '';
     for (let i = 0; i < length; i++) {
         text += possible.charAt(Math.floor(Math.random() * possible.length));
     }
     return text;
 }
 
-// Manejo del inicio de sesión
-loginButton.addEventListener('click', () => {
+function getHashParams() {
+    const hashParams = {};
+    const r = /([^&;=]+)=?([^&;]*)/g;
+    const q = window.location.hash.substring(1);
+    let e;
+    while ((e = r.exec(q))) {
+        hashParams[e[1]] = decodeURIComponent(e[2]);
+    }
+    return hashParams;
+}
+
+function login() {
     const state = generateRandomString(16);
     localStorage.setItem('spotify_auth_state', state);
 
     const authorizeUrl = 'https://accounts.spotify.com/authorize?' +
-        new URLSearchParams({
-            response_type: 'token',
-            client_id: clientId,
-            scope: scope,
-            redirect_uri: redirectUri,
-            state: state
-        }).toString();
-    
+        'response_type=token' +
+        '&client_id=' + encodeURIComponent(clientId) +
+        '&scope=' + encodeURIComponent(scope) +
+        '&redirect_uri=' + encodeURIComponent(redirectUri) +
+        '&state=' + encodeURIComponent(state);
+
     window.location = authorizeUrl;
-});
-
-// Manejo del cierre de sesión
-logoutButton.addEventListener('click', () => {
-    localStorage.removeItem('spotify_token');
-    localStorage.removeItem('spotify_token_expires');
-    showLoginSection();
-});
-
-// Mostrar la sección de login
-function showLoginSection() {
-    loginSection.classList.remove('hidden');
-    museumSection.classList.add('hidden');
-    loadingScreen.classList.add('hidden');
 }
 
-// Mostrar la sección del museo
-function showMuseumSection() {
-    loginSection.classList.add('hidden');
-    museumSection.classList.remove('hidden');
-    loadingScreen.classList.add('hidden');
+function logout() {
+    localStorage.removeItem('spotify_access_token');
+    localStorage.removeItem('spotify_auth_state');
+    window.location.hash = '';
+    showLoginScreen();
 }
 
-// Mostrar/ocultar pantalla de carga
-function showLoading(show = false) {
-    if (show) {
-        loadingScreen.classList.remove('hidden');
-    } else {
-        loadingScreen.classList.add('hidden');
-    }
-}
-
-// Obtener token de acceso desde la URL o storage
-function getAccessToken() {
-    const params = new URLSearchParams(window.location.hash.substring(1));
-    const storedToken = localStorage.getItem('spotify_token');
-    const storedTokenExpires = localStorage.getItem('spotify_token_expires');
-    
-    // Si hay un token en la URL
-    if (params.has('access_token')) {
-        const token = params.get('access_token');
-        const expiresIn = params.get('expires_in');
-        const state = params.get('state');
-        const storedState = localStorage.getItem('spotify_auth_state');
-        
-        // Verificar el state para seguridad
-        if (state === null || state !== storedState) {
-            console.error('Error de state en autenticación');
-            return null;
-        }
-        
-        // Limpiar state y guardar token
-        localStorage.removeItem('spotify_auth_state');
-        const expiresAt = Date.now() + (expiresIn * 1000);
-        localStorage.setItem('spotify_token', token);
-        localStorage.setItem('spotify_token_expires', expiresAt);
-        
-        // Limpiar la URL
-        window.history.replaceState({}, document.title, redirectUri);
-        
-        return token;
-    }
-    // Si hay un token almacenado y no ha expirado
-    else if (storedToken && storedTokenExpires && Date.now() < parseInt(storedTokenExpires)) {
-        return storedToken;
-    }
-    
-    return null;
-}
-
-// Realizar solicitud a la API de Spotify
-async function fetchFromSpotify(endpoint, token) {
-    const response = await fetch(`https://api.spotify.com/v1${endpoint}`, {
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
+// Funciones de API de Spotify
+async function fetchUserProfile(token) {
+    const response = await fetch('https://api.spotify.com/v1/me', {
+        headers: { 'Authorization': 'Bearer ' + token }
     });
-    
-    if (!response.ok) {
-        throw new Error(`Error en solicitud a Spotify: ${response.status}`);
-    }
-    
     return await response.json();
 }
 
-// Obtener tus top tracks
-async function getTopTracks(token) {
-    try {
-        const data = await fetchFromSpotify('/me/top/tracks?limit=12&time_range=medium_term', token);
-        return data.items.map(track => ({
-            name: track.name,
-            image: track.album.images[0].url,
-            type: 'track'
-        }));
-    } catch (error) {
-        console.error('Error al obtener top tracks:', error);
-        return [];
-    }
+async function fetchTopItems(token, type, limit = 50) {
+    const response = await fetch(`https://api.spotify.com/v1/me/top/${type}?limit=${limit}&time_range=medium_term`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+    });
+    return await response.json();
 }
 
-// Obtener tus top artistas
-async function getTopArtists(token) {
-    try {
-        const data = await fetchFromSpotify('/me/top/artists?limit=12&time_range=medium_term', token);
-        return data.items.map(artist => ({
-            name: artist.name,
-            image: artist.images[0].url,
-            type: 'artist'
-        }));
-    } catch (error) {
-        console.error('Error al obtener top artistas:', error);
-        return [];
-    }
+// Funciones de UI
+function showLoginScreen() {
+    loginScreen.classList.remove('hidden');
+    museumScreen.classList.add('hidden');
+    // Asegurar que el modal esté oculto al mostrar la pantalla de login
+    shareModal.classList.add('hidden');
 }
 
-// Obtener tus top álbumes (derivados de tus top tracks)
-async function getTopAlbums(token) {
-    try {
-        const data = await fetchFromSpotify('/me/top/tracks?limit=30&time_range=medium_term', token);
-        
-        // Filtrar álbumes únicos
-        const uniqueAlbums = [];
-        const albumIds = new Set();
-        
-        data.items.forEach(track => {
-            if (!albumIds.has(track.album.id) && uniqueAlbums.length < 12) {
-                albumIds.add(track.album.id);
-                uniqueAlbums.push({
-                    name: track.album.name,
-                    image: track.album.images[0].url,
-                    type: 'album'
-                });
-            }
-        });
-        
-        return uniqueAlbums;
-    } catch (error) {
-        console.error('Error al obtener top álbumes:', error);
-        return [];
-    }
+function showMuseumScreen() {
+    loginScreen.classList.add('hidden');
+    museumScreen.classList.remove('hidden');
+    // Asegurar que el modal esté oculto al mostrar la pantalla del museo
+    shareModal.classList.add('hidden');
 }
 
-// Función para obtener un número aleatorio en un rango
-function randomInRange(min, max) {
-    return Math.random() * (max - min) + min;
-}
-
-// Crear una cuadrícula para distribuir imágenes uniformemente
-function createGrid(containerWidth, containerHeight, numItems) {
-    // Crear un array con posiciones disponibles en una cuadrícula más densa
-    const margin = 20; // Margen mínimo entre elementos
-    const positions = [];
+function createCollage() {
+    collageContainer.innerHTML = '';
     
-    // Determinar el número de filas y columnas para una mejor distribución
-    // Intentamos crear más posiciones de las necesarias para tener más opciones
-    const density = 2.5; // Factor de densidad para crear más posiciones de las necesarias
-    const totalPositions = Math.ceil(numItems * density);
-    const aspectRatio = containerWidth / containerHeight;
-    const cols = Math.ceil(Math.sqrt(totalPositions * aspectRatio));
-    const rows = Math.ceil(totalPositions / cols);
+    // Combinar artistas y canciones
+    const allItems = [];
     
-    const cellWidth = containerWidth / cols;
-    const cellHeight = containerHeight / rows;
-    
-    // Crear muchas posiciones posibles para luego seleccionar las mejores
-    for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-            // Añadir variación dentro de cada celda para evitar patrones regulares
-            const baseX = col * cellWidth;
-            const baseY = row * cellHeight;
-            
-            // Agregar variación pero manteniéndose dentro de los límites
-            const variationX = cellWidth * 0.3; // 30% de variación horizontal
-            const variationY = cellHeight * 0.3; // 30% de variación vertical
-            
-            const x = baseX + randomInRange(-variationX, variationX);
-            const y = baseY + randomInRange(-variationY, variationY);
-            
-            // Asegurar que la posición esté dentro de los límites del contenedor
-            const safeX = Math.max(margin, Math.min(containerWidth - margin, x));
-            const safeY = Math.max(margin, Math.min(containerHeight - margin, y));
-            
-            positions.push({
-                x: safeX,
-                y: safeY,
-                used: false
+    topArtists.forEach(artist => {
+        if (artist.images && artist.images.length) {
+            allItems.push({
+                name: artist.name,
+                type: 'artist',
+                imageUrl: artist.images[0].url
             });
         }
-    }
+    });
     
-    // Mezclar todas las posiciones para aleatorizar
-    const shuffledPositions = [...positions].sort(() => Math.random() - 0.5);
-    
-    return shuffledPositions;
-}
-
-// Mostrar todos los elementos en el collage
-function displayInCollage(items) {
-    musicCollageContainer.innerHTML = '';
-    const containerWidth = musicCollageContainer.offsetWidth;
-    const containerHeight = musicCollageContainer.offsetHeight;
-    
-    // Tamaños variables para las imágenes con más variación
-    const sizes = [
-        { width: 90, height: 90 },
-        { width: 110, height: 110 },
-        { width: 130, height: 130 },
-        { width: 150, height: 150 },
-        { width: 170, height: 170 }
-    ];
-    
-    // Mezclar los elementos para distribuir los tipos
-    const shuffledItems = [...items].sort(() => Math.random() - 0.5);
-    
-    // Crear una cuadrícula con muchas posiciones potenciales
-    const availablePositions = createGrid(containerWidth, containerHeight, shuffledItems.length);
-    
-    // Función para verificar si una posición está demasiado cerca de otras ya usadas
-    function isTooClose(newX, newY, width, height, usedPositions, minDistance = 40) {
-        for (const pos of usedPositions) {
-            const dx = Math.abs(newX - pos.x);
-            const dy = Math.abs(newY - pos.y);
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance < minDistance) {
-                return true;
-            }
+    topTracks.forEach(track => {
+        if (track.album && track.album.images && track.album.images.length) {
+            allItems.push({
+                name: track.name,
+                type: 'track',
+                imageUrl: track.album.images[0].url
+            });
         }
-        return false;
-    }
+    });
     
-    // Posiciones que ya han sido utilizadas
-    const usedPositions = [];
+    // Mezclar aleatoriamente
+    allItems.sort(() => Math.random() - 0.5);
     
-    // Colocar cada elemento en una posición única
-    shuffledItems.forEach((item, index) => {
-        const el = document.createElement('div');
-        el.className = 'artwork-item';
-        el.style.backgroundImage = `url(${item.image})`;
-        el.title = `${item.name} (${item.type})`;
-        el.setAttribute('data-type', item.type);
+    // Crear elementos en el DOM
+    allItems.forEach((item, index) => {
+        const img = document.createElement('img');
+        img.src = item.imageUrl;
+        img.alt = item.name;
+        img.title = item.name;
+        img.className = 'album-cover';
         
-        // Seleccionar un tamaño aleatorio
-        const size = sizes[Math.floor(Math.random() * sizes.length)];
-        el.style.width = `${size.width}px`;
-        el.style.height = `${size.height}px`;
+        // Asignar tamaños diferentes para algunas imágenes
+        if (index % 5 === 0) {
+            img.style.gridColumn = 'span 2';
+            img.style.gridRow = 'span 2';
+        }
         
-        // Encontrar una posición que no esté demasiado cerca de otras
-        let position;
-        let attempts = 0;
-        const maxAttempts = 30;
-        
-        do {
-            // Si agotamos los intentos, simplemente aceptamos cualquier posición disponible
-            if (attempts >= maxAttempts || index >= availablePositions.length) {
-                position = {
-                    x: randomInRange(size.width/2, containerWidth - size.width/2),
-                    y: randomInRange(size.height/2, containerHeight - size.height/2)
-                };
-                break;
-            }
-            
-            position = availablePositions[index + attempts];
-            attempts++;
-        } while (isTooClose(position.x, position.y, size.width, size.height, usedPositions));
-        
-        // Ajustar la posición para que la imagen quede centrada en el punto
-        const adjustedX = position.x - (size.width / 2);
-        const adjustedY = position.y - (size.height / 2);
-        
-        // Asegurar que la imagen no se salga del contenedor
-        const safeX = Math.max(0, Math.min(containerWidth - size.width, adjustedX));
-        const safeY = Math.max(0, Math.min(containerHeight - size.height, adjustedY));
-        
-        el.style.left = `${safeX}px`;
-        el.style.top = `${safeY}px`;
-        
-        // Registrar esta posición como usada
-        usedPositions.push({
-            x: safeX + (size.width / 2),
-            y: safeY + (size.height / 2)
-        });
-        
-        // Rotación aleatoria con más variación
-        const rotate = randomInRange(-20, 20);
-        el.style.setProperty('--random-rotate', `${rotate}deg`);
-        el.style.transform = `rotate(${rotate}deg)`;
-        
-        // Animación con retraso basado en el índice
-        el.style.animation = `fadeIn 0.5s ease forwards`;
-        el.style.animationDelay = `${index * 0.08}s`; // Ligeramente más rápido
-        el.style.opacity = '0';
-        
-        // Agregar z-index aleatorio para efecto de profundidad
-        el.style.zIndex = Math.floor(randomInRange(1, 30)); // Mayor rango para más variación
-        
-        musicCollageContainer.appendChild(el);
+        collageContainer.appendChild(img);
     });
 }
 
-// Cargar los datos de Spotify y mostrarlos
-async function loadSpotifyData() {
-    const token = getAccessToken();
+async function generateShareImage() {
+    // Crear un contenedor temporal para la imagen
+    const tempContainer = document.createElement('div');
+    tempContainer.style.width = '900px';
+    tempContainer.style.padding = '20px';
+    tempContainer.style.backgroundColor = '#121212';
+    tempContainer.style.color = '#ffffff';
+    tempContainer.style.display = 'flex';
+    tempContainer.style.flexDirection = 'column';
+    tempContainer.style.alignItems = 'center';
     
-    if (!token) {
-        showLoginSection();
-        return;
-    }
+    // Título
+    const title = document.createElement('h1');
+    title.textContent = 'Museo Musical';
+    title.style.fontSize = '3rem';
+    title.style.color = '#1DB954';
+    title.style.margin = '20px 0';
+    tempContainer.appendChild(title);
     
+    // Clonar el marco y el collage
+    const frameClone = document.querySelector('.museum-frame').cloneNode(true);
+    frameClone.style.width = '800px';
+    tempContainer.appendChild(frameClone);
+    
+    // Añadir texto de nam3.es
+    const footer = document.createElement('p');
+    footer.textContent = 'nam3.es';
+    footer.style.fontSize = '1.5rem';
+    footer.style.margin = '20px 0';
+    tempContainer.appendChild(footer);
+    
+    // Añadir temporalmente al DOM para poder capturar
+    document.body.appendChild(tempContainer);
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    
+    // Generar imagen
     try {
-        showLoading(true);
+        const canvas = await html2canvas(tempContainer, {
+            allowTaint: true,
+            useCORS: true,
+            scale: 1
+        });
         
-        // Obtener datos
-        const [tracks, artists, albums] = await Promise.all([
-            getTopTracks(token),
-            getTopArtists(token),
-            getTopAlbums(token)
-        ]);
+        const imageUrl = canvas.toDataURL('image/png');
         
-        // Combinar todos los elementos en una sola colección
-        const allItems = [...tracks, ...artists, ...albums];
+        // Mostrar la imagen generada
+        shareImageContainer.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.alt = 'Museo Musical Compartible';
+        shareImageContainer.appendChild(img);
         
-        // Mostrar todos en el collage
-        displayInCollage(allItems);
+        // Configurar el botón de descarga
+        downloadButton.onclick = () => {
+            const link = document.createElement('a');
+            link.download = 'mi-museo-musical.png';
+            link.href = imageUrl;
+            link.click();
+        };
         
-        showMuseumSection();
     } catch (error) {
-        console.error('Error al cargar datos:', error);
-        alert('Hubo un problema al cargar tus datos de Spotify. Por favor, inténtalo de nuevo.');
-        showLoginSection();
-    } finally {
-        showLoading(false);
+        console.error('Error generando la imagen:', error);
+        shareImageContainer.innerHTML = '<p>Ha ocurrido un error generando la imagen.</p>';
     }
+    
+    // Eliminar el contenedor temporal
+    document.body.removeChild(tempContainer);
 }
 
-// Inicializar la aplicación
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOM cargado, inicializando aplicación");
+// Event listeners - Mejorar manejo de eventos para el modal
+loginButton.addEventListener('click', login);
+logoutButton.addEventListener('click', logout);
+
+// Evento para mostrar el modal
+shareButton.addEventListener('click', () => {
+    shareModal.classList.remove('hidden');
+    generateShareImage();
+});
+
+// Múltiples formas de cerrar el modal
+closeModal.addEventListener('click', () => {
+    shareModal.classList.add('hidden');
+});
+
+// Cerrar el modal haciendo clic fuera de su contenido
+shareModal.addEventListener('click', (event) => {
+    if (event.target === shareModal) {
+        shareModal.classList.add('hidden');
+    }
+});
+
+// Cerrar el modal con la tecla Escape
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !shareModal.classList.contains('hidden')) {
+        shareModal.classList.add('hidden');
+    }
+});
+
+// Inicialización
+window.addEventListener('load', async () => {
+    // Asegurar que el modal esté oculto al cargar la página
+    shareModal.classList.add('hidden');
     
-    // Asegurarse de que la pantalla de carga está oculta inicialmente
-    showLoading(false);
+    // Comprobar si hay token en la URL (después de autenticación)
+    const params = getHashParams();
+    const token = params.access_token;
     
-    // Verificar token y mostrar la sección correspondiente
-    const token = getAccessToken();
     if (token) {
-        console.log("Token encontrado, cargando datos");
-        loadSpotifyData();
+        // Guardar token
+        localStorage.setItem('spotify_access_token', token);
+        // Limpiar URL
+        window.location.hash = '';
+        
+        try {
+            // Obtener datos del usuario y elementos top
+            userProfileData = await fetchUserProfile(token);
+            
+            const artistsData = await fetchTopItems(token, 'artists', 30);
+            topArtists = artistsData.items || [];
+            
+            const tracksData = await fetchTopItems(token, 'tracks', 30);
+            topTracks = tracksData.items || [];
+            
+            // Crear collage y mostrar pantalla del museo
+            createCollage();
+            showMuseumScreen();
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            alert('Ha ocurrido un error al conectar con Spotify. Por favor, inténtalo de nuevo.');
+            logout();
+        }
     } else {
-        console.log("No hay token, mostrando login");
-        showLoginSection();
+        // Comprobar si hay token guardado
+        const savedToken = localStorage.getItem('spotify_access_token');
+        if (savedToken) {
+            try {
+                // Verificar que el token sigue siendo válido
+                userProfileData = await fetchUserProfile(savedToken);
+                
+                const artistsData = await fetchTopItems(savedToken, 'artists', 30);
+                topArtists = artistsData.items || [];
+                
+                const tracksData = await fetchTopItems(savedToken, 'tracks', 30);
+                topTracks = tracksData.items || [];
+                
+                createCollage();
+                showMuseumScreen();
+            } catch (error) {
+                console.error('Error con el token guardado:', error);
+                logout();
+            }
+        } else {
+            showLoginScreen();
+        }
     }
 });
